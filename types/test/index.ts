@@ -39,6 +39,41 @@ namespace StoreInstance {
     state.value;
   });
 
+  store.subscribeAction((action, state) => {
+    action.type;
+    action.payload;
+    state.value;
+  });
+
+  store.subscribeAction({
+    before(action, state) {
+      action.type;
+      action.payload;
+      state.value;
+    }
+  });
+
+  store.subscribeAction({
+    before(action, state) {
+      action.type;
+      action.payload;
+      state.value;
+    },
+    after(action, state) {
+      action.type;
+      action.payload;
+      state.value;
+    }
+  });
+
+  store.subscribeAction({
+    after(action, state) {
+      action.type;
+      action.payload;
+      state.value;
+    }
+  });
+
   store.replaceState({ value: 10 });
 }
 
@@ -53,6 +88,7 @@ namespace RootModule {
     },
     actions: {
       foo ({ state, getters, dispatch, commit }, payload) {
+        this.state.value;
         state.value;
         getters.count;
         dispatch("bar", {});
@@ -77,6 +113,7 @@ namespace RootDefaultModule {
     },
     actions: {
       foo ({ state, getters, dispatch, commit }, payload) {
+        this.state.value;
         state.value;
         getters.count;
         dispatch("bar", {});
@@ -90,6 +127,15 @@ namespace RootDefaultModule {
   });
 }
 
+namespace InitialStateFunction {
+  const store = new Vuex.Store({
+    state: () => ({
+      value: 1
+    })
+  });
+  const n: number = store.state.value;
+}
+
 namespace NestedModules {
   interface RootState {
     a: {
@@ -101,7 +147,10 @@ namespace NestedModules {
       };
       d: {
         value: number;
-      };
+      },
+      e: {
+        value: number;
+      }
     };
   }
 
@@ -139,7 +188,17 @@ namespace NestedModules {
       b: {
         modules: {
           c: module,
-          d: module
+          d: module,
+          e: {
+            state: {
+              value: 0
+            },
+            actions: {
+              foo(context: ActionStore, payload) {
+                this.state.a;
+              }
+            }
+          }
         }
       }
     }

@@ -6,7 +6,7 @@
  * @param {Function} f
  * @return {*}
  */
-function find (list, f) {
+export function find (list, f) {
   return list.filter(f)[0]
 }
 
@@ -63,4 +63,10 @@ export function isPromise (val) {
 
 export function assert (condition, msg) {
   if (!condition) throw new Error(`[vuex] ${msg}`)
+}
+
+export function partial (fn, arg) {
+  return function () {
+    return fn(arg)
+  }
 }

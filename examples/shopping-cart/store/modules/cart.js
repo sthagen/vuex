@@ -1,64 +1,90 @@
 import shop from '../../api/shop'
-import * as types from '../mutation-types'
 
 // initial state
 // shape: [{ id, quantity }]
 const state = {
-  added: [],
+  items: [],
   checkoutStatus: null
 }
 
 // getters
 const getters = {
-  checkoutStatus: state => state.checkoutStatus
+  cartProducts: (state, getters, rootState) => {
+    return state.items.map(({ id, quantity }) => {
+      const product = rootState.products.all.find(product => product.id === id)
+      return {
+        title: product.title,
+        price: product.price,
+        quantity
+      }
+    })
+  },
+
+  cartTotalPrice: (state, getters) => {
+    return getters.cartProducts.reduce((total, product) => {
+      return total + product.price * product.quantity
+    }, 0)
+  }
 }
 
 // actions
 const actions = {
   checkout ({ commit, state }, products) {
-    const savedCartItems = [...state.added]
-    commit(types.CHECKOUT_REQUEST)
+    const savedCartItems = [...state.items]
+    commit('setCheckoutStatus', null)
+    // empty cart
+    commit('setCartItems', { items: [] })
     shop.buyProducts(
       products,
-      () => commit(types.CHECKOUT_SUCCESS),
-      () => commit(types.CHECKOUT_FAILURE, { savedCartItems })
+      () => commit('setCheckoutStatus', 'successful'),
+      () => {
+        commit('setCheckoutStatus', 'failed')
+        // rollback to the cart saved before sending the request
+        commit('setCartItems', { items: savedCartItems })
+      }
     )
+  },
+
+  addProductToCart ({ state, commit }, product) {
+    commit('setCheckoutStatus', null)
+    if (product.inventory > 0) {
+      const cartItem = state.items.find(item => item.id === product.id)
+      if (!cartItem) {
+        commit('pushProductToCart', { id: product.id })
+      } else {
+        commit('incrementItemQuantity', cartItem)
+      }
+      // remove 1 item from stock
+      commit('products/decrementProductInventory', { id: product.id }, { root: true })
+    }
   }
 }
 
 // mutations
 const mutations = {
-  [types.ADD_TO_CART] (state, { id }) {
-    state.checkoutStatus = null
-    const record = state.added.find(p => p.id === id)
-    if (!record) {
-      state.added.push({
-        id,
-        quantity: 1
-      })
-    } else {
-      record.quantity++
-    }
+  pushProductToCart (state, { id }) {
+    state.items.push({
+      id,
+      quantity: 1
+    })
   },
 
-  [types.CHECKOUT_REQUEST] (state) {
-    // clear cart
-    state.added = []
-    state.checkoutStatus = null
+  incrementItemQuantity (state, { id }) {
+    const cartItem = state.items.find(item => item.id === id)
+    cartItem.quantity++
   },
 
-  [types.CHECKOUT_SUCCESS] (state) {
-    state.checkoutStatus = 'successful'
+  setCartItems (state, { items }) {
+    state.items = items
   },
 
-  [types.CHECKOUT_FAILURE] (state, { savedCartItems }) {
-    // rollback to the cart saved before sending the request
-    state.added = savedCartItems
-    state.checkoutStatus = 'failed'
+  setCheckoutStatus (state, status) {
+    state.checkoutStatus = status
   }
 }
 
 export default {
+  namespaced: true,
   state,
   getters,
   actions,

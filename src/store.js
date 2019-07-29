@@ -1,7 +1,7 @@
 import applyMixin from './mixin'
 import devtoolPlugin from './plugins/devtool'
 import ModuleCollection from './module/module-collection'
-import { forEachValue, isObject, isPromise, assert } from './util'
+import { forEachValue, isObject, isPromise, assert, partial } from './util'
 
 let Vue // bind on install
 
@@ -17,7 +17,7 @@ export class Store {
     if (process.env.NODE_ENV !== 'production') {
       assert(Vue, `must call Vue.use(Vuex) before creating a store instance.`)
       assert(typeof Promise !== 'undefined', `vuex requires a Promise polyfill in this browser.`)
-      assert(this instanceof Store, `Store must be called with the new operator.`)
+      assert(this instanceof Store, `store must be called with the new operator.`)
     }
 
     const {
@@ -63,7 +63,8 @@ export class Store {
     // apply plugins
     plugins.forEach(plugin => plugin(this))
 
-    if (Vue.config.devtools) {
+    const useDevtools = options.devtools !== undefined ? options.devtools : Vue.config.devtools
+    if (useDevtools) {
       devtoolPlugin(this)
     }
   }
@@ -74,7 +75,7 @@ export class Store {
 
   set state (v) {
     if (process.env.NODE_ENV !== 'production') {
-      assert(false, `Use store.replaceState() to explicit replace store state.`)
+      assert(false, `use store.replaceState() to explicit replace store state.`)
     }
   }
 
@@ -128,11 +129,34 @@ export class Store {
       return
     }
 
-    this._actionSubscribers.forEach(sub => sub(action, this.state))
+    try {
+      this._actionSubscribers
+        .filter(sub => sub.before)
+        .forEach(sub => sub.before(action, this.state))
+    } catch (e) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[vuex] error in before action subscribers: `)
+        console.error(e)
+      }
+    }
 
-    return entry.length > 1
+    const result = entry.length > 1
       ? Promise.all(entry.map(handler => handler(payload)))
       : entry[0](payload)
+
+    return result.then(res => {
+      try {
+        this._actionSubscribers
+          .filter(sub => sub.after)
+          .forEach(sub => sub.after(action, this.state))
+      } catch (e) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`[vuex] error in after action subscribers: `)
+          console.error(e)
+        }
+      }
+      return res
+    })
   }
 
   subscribe (fn) {
@@ -140,7 +164,8 @@ export class Store {
   }
 
   subscribeAction (fn) {
-    return genericSubscribe(fn, this._actionSubscribers)
+    const subs = typeof fn === 'function' ? { before: fn } : fn
+    return genericSubscribe(subs, this._actionSubscribers)
   }
 
   watch (getter, cb, options) {
@@ -231,7 +256,9 @@ function resetStoreVM (store, state, hot) {
   const computed = {}
   forEachValue(wrappedGetters, (fn, key) => {
     // use computed to leverage its lazy-caching mechanism
-    computed[key] = () => fn(store)
+    // direct inline function use will lead to closure preserving oldVm.
+    // using partial to return function with only arguments preserved in closure enviroment.
+    computed[key] = partial(fn, store)
     Object.defineProperty(store.getters, key, {
       get: () => store._vm[key],
       enumerable: true // for local getters
@@ -274,6 +301,9 @@ function installModule (store, rootState, path, module, hot) {
 
   // register in namespace map
   if (module.namespaced) {
+    if (store._modulesNamespaceMap[namespace] && process.env.NODE_ENV !== 'production') {
+      console.error(`[vuex] duplicate namespace ${namespace} for the namespaced module ${path.join('/')}`)
+    }
     store._modulesNamespaceMap[namespace] = module
   }
 
@@ -441,7 +471,7 @@ function registerGetter (store, type, rawGetter, local) {
 function enableStrictMode (store) {
   store._vm.$watch(function () { return this._data.$$state }, () => {
     if (process.env.NODE_ENV !== 'production') {
-      assert(store._committing, `Do not mutate vuex store state outside mutation handlers.`)
+      assert(store._committing, `do not mutate vuex store state outside mutation handlers.`)
     }
   }, { deep: true, sync: true })
 }
@@ -460,7 +490,7 @@ function unifyObjectStyle (type, payload, options) {
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    assert(typeof type === 'string', `Expects string as the type, but found ${typeof type}.`)
+    assert(typeof type === 'string', `expects string as the type, but found ${typeof type}.`)
   }
 
   return { type, payload, options }
