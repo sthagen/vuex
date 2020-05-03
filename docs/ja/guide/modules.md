@@ -8,14 +8,14 @@
 
 ``` js
 const moduleA = {
-  state: { ... },
+  state: () => ({ ... }),
   mutations: { ... },
   actions: { ... },
   getters: { ... }
 }
 
 const moduleB = {
-  state: { ... },
+  state: () => ({ ... }),
   mutations: { ... },
   actions: { ... }
 }
@@ -37,7 +37,9 @@ store.state.b // -> `moduleB` のステート
 
 ``` js
 const moduleA = {
-  state: { count: 0 },
+  state: () => ({
+    count: 0
+  }),
   mutations: {
     increment (state) {
       // `state` はモジュールのローカルステート
@@ -94,7 +96,7 @@ const store = new Vuex.Store({
       namespaced: true,
 
       // モジュールのアセット
-      state: { ... }, // モジュールステートはすでにネストされており、名前空間のオプションによって影響を受けません
+      state: () => ({ ... }), // モジュールステートはすでにネストされており、名前空間のオプションによって影響を受けません
       getters: {
         isAdmin () { ... } // -> getters['account/isAdmin']
       },
@@ -109,7 +111,7 @@ const store = new Vuex.Store({
       modules: {
         // 親モジュールから名前空間を継承する
         myPage: {
-          state: { ... },
+          state: () => ({ ... }),
           getters: {
             profile () { ... } // -> getters['account/profile']
           }
@@ -119,7 +121,7 @@ const store = new Vuex.Store({
         posts: {
           namespaced: true,
 
-          state: { ... },
+          state: () => ({ ... }),
           getters: {
             popular () { ... } // -> getters['account/posts/popular']
           }
@@ -297,7 +299,13 @@ store.registerModule(['nested', 'myModule'], {
 
 `store.unregisterModule(moduleName)` を呼び出せば、動的に登録したモジュールを削除できます。ただしストア作成（store creation）の際に宣言された、静的なモジュールはこのメソッドで削除できないことに注意してください。
 
-サーバサイドレンダリングされたアプリケーションから状態を保持するなど、新しいモジュールを登録するときに、以前の状態を保持したい場合があります。`preserveState` オプション(`store.registerModule('a', module, { preserveState: true })`)でこれを実現できます。
+また、すでに動的なモジュールが登録されているかどうかを `store.hasModule(moduleName)` メソッドを使って確認することができます。
+
+#### ステートの保持
+
+サーバサイドレンダリングされたアプリケーションから状態を保持するなど、新しいモジュールを登録するときに、以前の状態を保持したい場合があります。`preserveState` オプション（`store.registerModule('a', module, { preserveState: true })`）でこれを実現できます。
+
+`preserveState: true` を設定した場合、モジュールを登録する際、アクション、ミューテーション、そしてゲッターは登録されますがステートは登録されません。これはステートがすでにモジュールに登録されていることを前提としており、ステートを上書きしないようにするためです。
 
 ### モジュールの再利用
 
@@ -312,11 +320,9 @@ store.registerModule(['nested', 'myModule'], {
 
 ``` js
 const MyReusableModule = {
-  state () {
-    return {
-      foo: 'bar'
-    }
-  },
+  state: () => ({
+    foo: 'bar'
+  }),
   // ミューテーション、アクション、ゲッター...
 }
 ```

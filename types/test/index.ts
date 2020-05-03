@@ -39,6 +39,8 @@ namespace StoreInstance {
     state.value;
   });
 
+  store.subscribe(() => {}, { prepend: true });
+
   store.subscribeAction((action, state) => {
     action.type;
     action.payload;
@@ -74,6 +76,8 @@ namespace StoreInstance {
     }
   });
 
+  store.subscribeAction({}, { prepend: true });
+
   store.replaceState({ value: 10 });
 }
 
@@ -98,7 +102,8 @@ namespace RootModule {
     mutations: {
       bar (state, payload) {}
     },
-    strict: true
+    strict: true,
+    devtools: true
   });
 }
 
@@ -292,6 +297,8 @@ namespace RegisterModule {
     state: { value: 1 }
   });
 
+  store.hasModule('a')
+
   store.registerModule(["a", "b"], {
     state: { value: 2 }
   });
@@ -299,6 +306,8 @@ namespace RegisterModule {
   store.registerModule(["a", "b"], {
     state: { value: 2 }
   }, { preserveState: true });
+
+  store.hasModule(['a', 'b'])
 
   store.unregisterModule(["a", "b"]);
   store.unregisterModule("a");
