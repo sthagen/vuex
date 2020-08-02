@@ -1,6 +1,5 @@
 import Vue from "vue";
 import * as Vuex from "../index";
-import createLogger from "../../dist/logger";
 
 Vue.use(Vuex);
 
@@ -69,10 +68,66 @@ namespace StoreInstance {
   });
 
   store.subscribeAction({
+    before(action, state) {
+      action.type;
+      action.payload;
+      state.value;
+    },
+    error(action, state, error) {
+      action.type;
+      action.payload;
+      state.value;
+      error;
+    }
+  });
+
+  store.subscribeAction({
+    before(action, state) {
+      action.type;
+      action.payload;
+      state.value;
+    },
     after(action, state) {
       action.type;
       action.payload;
       state.value;
+    },
+    error(action, state, error) {
+      action.type;
+      action.payload;
+      state.value;
+      error;
+    }
+  });
+
+  store.subscribeAction({
+    after(action, state) {
+      action.type;
+      action.payload;
+      state.value;
+    }
+  });
+
+  store.subscribeAction({
+    after(action, state) {
+      action.type;
+      action.payload;
+      state.value;
+    },
+    error(action, state, error) {
+      action.type;
+      action.payload;
+      state.value;
+      error;
+    }
+  });
+
+  store.subscribeAction({
+    error(action, state, error) {
+      action.type;
+      action.payload;
+      state.value;
+      error;
     }
   });
 
@@ -382,7 +437,7 @@ namespace Plugins {
     });
   }
 
-  const logger = createLogger<{ value: number }>({
+  const logger = Vuex.createLogger<{ value: number }>({
     collapsed: true,
     transformer: state => state.value,
     mutationTransformer: (mutation: { type: string }) => mutation.type
